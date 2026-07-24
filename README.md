@@ -1,1 +1,1 @@
-### Chase and Aidan's Reticulum stuf
+### Chase and Aidan's Reticulum stuff
