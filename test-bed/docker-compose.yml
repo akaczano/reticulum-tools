@@ -1,0 +1,28 @@
+services:
+  node1:
+    image: rns-node
+    container_name: node1
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./config1:/root/.reticulum
+    networks:
+      testbed:
+        ipv4_address: 172.20.0.11
+  node2:
+    image: rns-node
+    container_name: node2
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./config2:/root/.reticulum
+    networks:
+      testbed:
+        ipv4_address: 172.20.0.12
+networks:
+  testbed:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

@@ -1,0 +1,30 @@
+[reticulum]
+enable_transport = True
+share_instance = Yes
+instance_name = default
+discover_interfaces = True
+autoconnect_discovered_interfaces = 3
+respond_to_probes = Yes
+
+[logging]
+loglevel = 4
+
+[interfaces]
+
+[[TCP Server Interface]]
+  type = TCPServerInterface
+  enabled = yes
+  name = TCP Server
+  discovery_name = Node1
+  listen_ip = 0.0.0.0
+  listen_port = 4242
+
+
+[[TCP Client Interface]]
+  type = TCPClientInterface
+  enabled = yes
+  name = TCP Client
+  discovery_name = Node1
+  target_host = 172.20.0.12
+  target_port = 4242
+
