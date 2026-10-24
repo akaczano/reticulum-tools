@@ -1,0 +1,63 @@
+services:
+  node-gordon:
+    image: messenger-node
+    container_name: gordon
+    environment:
+      - PYTHONUNBUFFERED=1
+      - USERNAME=Gordon
+    volumes:
+      - ./configs/gordon:/root/.reticulum   
+      - ./db/gordon.db:/opt/app/rns-messenger.db
+      - ./identity/gordon:/opt/app/id
+    ports:
+      - 5001:5000
+    networks:
+      rns-messenger:
+        ipv4_address: 172.20.0.11
+  node-todd:
+    image: messenger-node
+    container_name: todd
+    environment:
+      - PYTHONUNBUFFERED=1
+      - USERNAME=Todd
+    volumes:
+      - ./configs/todd:/root/.reticulum
+      - ./db/todd.db:/opt/app/rns-messenger.db
+      - ./identity/todd:/opt/app/id
+    ports:
+      - 5002:5000
+    networks:
+      rns-messenger:
+        ipv4_address: 172.20.0.12
+  node-transport:
+    image: rns-node
+    container_name: transport
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./configs/transport:/root/.reticulum      
+    networks:
+      rns-messenger:
+        ipv4_address: 172.20.0.13
+  node-roger:
+    image: messenger-node
+    container_name: roger
+    environment:
+      - PYTHONUNBUFFERED=1
+      - USERNAME=Roger
+    volumes:
+      - ./configs/roger:/root/.reticulum
+      - ./db/roger.db:/opt/app/rns-messenger.db
+      - ./identity/roger:/opt/app/id
+    ports:
+      - 5003:5000
+    networks:
+      rns-messenger:
+        ipv4_address: 172.20.0.14
+networks:
+  rns-messenger:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

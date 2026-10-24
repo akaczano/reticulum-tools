@@ -1,0 +1,46 @@
+[reticulum]
+enable_transport = True
+share_instance = Yes
+instance_name = default
+discover_interfaces = True
+autoconnect_discovered_interfaces = 3
+respond_to_probes = Yes
+
+[logging]
+loglevel = 4
+
+[interfaces]
+
+[[TCP Server Interface]]
+  type = TCPServerInterface
+  enabled = yes
+  name = TCP Server
+  discovery_name = Transport
+  listen_ip = 0.0.0.0
+  listen_port = 4242
+
+
+[[TCP Client Interface Gordon]]
+  type = TCPClientInterface
+  enabled = yes
+  name = TCP Client Gordon
+  discovery_name = Gordon
+  target_host = 172.20.0.11
+  target_port = 4242
+
+[[TCP Client Interface Todd]]
+  type = TCPClientInterface
+  enabled = yes
+  name = TCP Client Todd
+  discovery_name = Todd
+  target_host = 172.20.0.12
+  target_port = 4242
+
+[[TCP Client Interface Roger]]
+  type = TCPClientInterface
+  enabled = yes
+  name = TCP Client Roger
+  discovery_name = Roger
+  target_host = 172.20.0.14
+  target_port = 4242
+

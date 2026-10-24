@@ -1,0 +1,9 @@
+FROM rns-node
+
+RUN pip install flask["async"] sqlalchemy && mkdir /opt/app
+COPY ./src /opt/app/src
+WORKDIR /opt/app
+
+EXPOSE 5000
+
+CMD rnsd & python src/app.py

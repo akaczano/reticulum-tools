@@ -1,2 +1,13 @@
 test-bed/config1/storage
 test-bed/config2/storage
+rns-server/tests/configs/*/interfaces
+rns-server/tests/configs/*/storage
+rns-server/tests/db
+rns-server/tests/identity
+.echo_identity
+echo/echo_identity
+rns-messenger.db
+rns-server/rns-messenger.db
+rns-server/id
+rns-server/__pycache__
+rns-server/src/__pycache__
