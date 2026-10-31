@@ -1,7 +1,0 @@
-FROM python:latest
-
-RUN apt-get update && apt-get install net-tools
-RUN pip install rns lxmf
-CMD rnsd
-
-
