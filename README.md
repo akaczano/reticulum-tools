@@ -42,8 +42,14 @@ To get a simple, containerized test network up and running, you can do the follo
     - todd
     - transport
     - roger
+
 4. Gordon, Todd, and Roger all have their rns-server exposed on ports 5001, 5002, and 5003 respectively. Doing `curl http://localhost:5001/interfaces` should show you what interfaces Gordon is conntected to. Doing `curl http://localhost:5001/contacts` will show you what other people he sees.
 
+5. Go into `rns-server/tests/scripts` to run scripts that autopopulate the curl commands
+
+    - `get_contacts.sh` runs the contacts URL from step 4
+    - `get_interfaces.sh` runs the interfaces URL from step 4
+    - `send_message.sh` will send a message from one user to another
 
 #### Source Code
 
