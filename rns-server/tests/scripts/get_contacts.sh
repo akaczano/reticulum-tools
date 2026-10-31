@@ -11,7 +11,6 @@ show_help() {
     echo "  -h          Show this help menu and exit."
     echo ""
     echo "Examples:"
-    echo "  $0 -h"
     echo "  $0 gordon"
     echo "  $0 todd"
     exit 0
@@ -30,10 +29,10 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
-# Assign the first positional argument to a descriptive variable
+# Assign the name
 NAME="$1"
 
-# Figure out port number for the user
+# Figure out the port number for the user
 PORT_NUM=""
 if [[ ${NAME} == "gordon" ]]; then
     PORT_NUM="5001"
