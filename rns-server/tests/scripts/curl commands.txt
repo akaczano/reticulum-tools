@@ -1,6 +1,0 @@
-JSON dump of interface information: curl http://localhost:5001/interfaces
-
-Get contacts: curl http://localhost:5001/contacts
-
-Send a message: curl -X POST -d '{"user": 1, "message": "bro"}' -H 'Content-Type: application/json' http://localhost:5001/send
-
