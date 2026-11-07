@@ -153,7 +153,7 @@ class Server:
         message = {}
         message["id"] = str(uuid.uuid4())
         message["text"] = text
-        message["source"] = RNS.prettyhexrep(self.destination.hash)        
+        message["source"] = RNS.prettyhexrep(self.destination.hash)[1:-1]        
         message["timestamp"] = datetime.datetime.now().isoformat()
 
         with Session(self.database) as session:            
@@ -227,7 +227,6 @@ class Server:
         packet_receipt.set_delivery_callback(packet_delivered)                                     
             
         return message
-
         
 
     async def send_message(self, hash, text, timeout):        

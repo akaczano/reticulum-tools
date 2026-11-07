@@ -12,6 +12,11 @@ export const fetchMessages = async () => {
 }
 
 export const sendMessage = async (message) => {
-    const result = await client.post('/send', message);
-    return result;
+    try {
+        const result = await client.post('/send', message);
+        return result;
+    } catch (error) {
+        throw Error(error.response.data.message);
+    }
+    
 }
