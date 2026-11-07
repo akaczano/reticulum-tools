@@ -1,0 +1,22 @@
+.message-tab {
+    font-size: 18px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 3px;
+    background-color: #a2a7b0;
+    border-left: 1px solid gray;
+}
+
+.message-tab.selected {
+    border-bottom: 3px solid #5be3cc;
+}
+
+.message-tab.unselected:hover {
+    cursor: pointer;
+    color: #4c586e;
+}
+
+.message-body {
+    min-height: 40vh;
+}
