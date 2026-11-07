@@ -1,8 +1,8 @@
 FROM rns-node
-
-RUN pip install flask["async"] sqlalchemy && mkdir /opt/app
-COPY ./src /opt/app/src
 WORKDIR /opt/app
+COPY ./requirements.txt /opt/app
+RUN pip install -r requirements.txt
+COPY ./src /opt/app/src
 
 EXPOSE 5000
 

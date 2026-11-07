@@ -3,7 +3,7 @@ import asyncio
 from threading import Thread, Event, Lock
 import json
 import uuid
-from sqlalchemy import Engine, select
+from sqlalchemy import CursorResult, Engine, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import time
@@ -15,7 +15,7 @@ from tables import Message, Contact
 
 
 class Server:
-    def __init__(self, rns: RNS.Reticulum, database: Engine):        
+    def __init__(self, rns, database: Engine):        
         self.reticulum = rns
         self.database = database
         self.identity = self.__load_identity()
@@ -60,32 +60,72 @@ class Server:
             RNS.Identity.to_file(server_identity, constants.IDENTITY_PATH)
             return server_identity
         
+    def status(self):
+        return {
+            "hash": RNS.prettyhexrep(self.destination.hash)[1:-1],
+            "name": self.name
+        }
+
+
 
     def run(self):
         while not self.stop_signal.is_set():
             self.destination.announce(("name:" + self.name).encode())
             time.sleep(5)
+    
 
-    def packet_received(self, message, packet):
-        json_str = message.decode()
-        payload = json.loads(json_str)
-        print(payload)
-        record = Message(
-            id = payload["id"],
-            source = payload["source"],
-            text = payload["text"],
-            timestamp = datetime.datetime.fromisoformat(payload["timestamp"])
-        )
-        with Session(self.database) as session:
-            session.add(record)
+    def process_packet(self, message: dict, status, packet_hash, rtt=None):
+        print("Packet processed", packet_hash)
+        rssi = None
+        snr = None                
+        
+        if self.reticulum.is_connected_to_shared_instance:
+            rssi = self.reticulum.get_packet_rssi(packet_hash)
+            snr  = self.reticulum.get_packet_snr(packet_hash)
+
+        with Session(self.database) as session: 
+
+
+            update_stmt = update(Message).where(Message.id == message["id"]).values(
+                status=status,
+                rtt=rtt,
+                rssi=rssi,
+                snr=snr,
+                time_received=datetime.datetime.now()
+            )
+            update_result: CursorResult = session.execute(update_stmt)
+
+            if update_result.rowcount < 1:
+                # There did not already exist a matching message record
+                record = Message(
+                    id = message["id"],
+                    source = message["source"],
+                    destination = message["destination"],
+                    text = message["text"],                
+                    time_sent = datetime.datetime.fromisoformat(message["timestamp"]),
+                    status=status,
+                    rtt=rtt,
+                    rssi=rssi,
+                    snr=snr,
+                    time_received=datetime.datetime.now()
+                )
+                session.add(record)
+            
             session.commit()
+
+
+    def packet_received(self, message, packet: RNS.Packet):
+        json_str = message.decode()
+        payload = json.loads(json_str)        
+        self.process_packet(payload,  RNS.PacketReceipt.DELIVERED, packet.packet_hash)
+        
 
     def received_announce(self, destination_hash, announced_identity, app_data):   
         if not app_data:
             return
     
     
-        hash = RNS.prettyhexrep(destination_hash)            
+        hash = RNS.prettyhexrep(destination_hash)[1:-1]            
         info: str = app_data.decode()
         
         if not "name:" in info:
@@ -109,23 +149,30 @@ class Server:
                 except IntegrityError:
                     print("Caught duplicate announce")                    
 
-    async def send_message(self, user_id, text, timeout):        
+    def build_message(self, hash, text):
         message = {}
         message["id"] = str(uuid.uuid4())
         message["text"] = text
-        message["source"] = RNS.prettyhexrep(self.destination.hash)
+        message["source"] = RNS.prettyhexrep(self.destination.hash)        
         message["timestamp"] = datetime.datetime.now().isoformat()
 
-        destination_hash_str = None
-
         with Session(self.database) as session:            
-            user_record = session.query(Contact).where(Contact.id == user_id).one_or_none()
+            user_record = session.query(Contact).where(Contact.hash == hash).one_or_none()
             if user_record:
-                destination_hash_str = user_record.hash
+                message["destination"] = user_record.hash
             else:
-                raise ValueError("Couldn't find user with ID " + str(user_id))           
+                raise ValueError("Couldn't find user with hash " + hash)     
 
-        destination_hash = bytes.fromhex(destination_hash_str[1:-1])      
+        return message
+      
+
+    def do_send(self, hash, text, timeout, loop=None, future=None):
+        message = self.build_message(hash, text)
+
+        destination_hash_str = message["destination"]   
+
+        
+        destination_hash = bytes.fromhex(destination_hash_str)      
 
         if not RNS.Transport.await_path(destination_hash, timeout=timeout):
             return {
@@ -141,31 +188,55 @@ class Server:
             constants.APP_NAME,
             *constants.ASPECTS
         )
-        payload = json.dumps(message)
-        print(payload)
+        payload = json.dumps(message)        
         
-        
-        echo_request = RNS.Packet(request_destination, payload.encode())   
-        packet_receipt = echo_request.send()    
-
-        loop = asyncio.get_running_loop()    
-        future = loop.create_future()
+        packet = RNS.Packet(request_destination, payload.encode())                   
 
 
-        def packet_delivered(r: RNS.PacketReceipt):                
-            loop.call_soon_threadsafe(future.set_result, r)
+        def packet_delivered(r: RNS.PacketReceipt):   
+            self.process_packet(message, r.status, r.proof_packet.packet_hash, r.get_rtt())
+            if loop:
+                loop.call_soon_threadsafe(future.set_result, r)
 
-        def packet_timed_out(r: RNS.PacketReceipt):        
-            loop.call_soon_threadsafe(future.set_result, r) 
-        
+        def packet_timed_out(r: RNS.PacketReceipt): 
+            with Session(self.database) as session: 
+                stmt = update(Message).where(Message.id == message["id"]).values(
+                    status=RNS.PacketReceipt.FAILED
+                )
+                session.execute(stmt)
+                session.commit()  
+            if loop:
+                loop.call_soon_threadsafe(future.set_result, r) 
+
+
+        record = Message(
+            id = message["id"],
+            source = message["source"],
+            destination = message["destination"],
+            text = message["text"],                
+            time_sent = datetime.datetime.fromisoformat(message["timestamp"]),
+            status = RNS.PacketReceipt.SENT
+        )
+        with Session(self.database) as session:
+            session.add(record)
+            session.commit()   
+
+        packet_receipt: RNS.PacketReceipt = packet.send()  
         packet_receipt.set_timeout(timeout)
         packet_receipt.set_timeout_callback(packet_timed_out)
         packet_receipt.set_delivery_callback(packet_delivered)                                     
+            
+        return message
 
-        result: RNS.PacketReceipt = await future
         
-        return {
-            "status": result.get_status(),
-            "rtt": result.get_rtt()
-        } 
+
+    async def send_message(self, hash, text, timeout):        
+        loop = asyncio.get_running_loop()    
+        future = loop.create_future()
+        message = self.do_send(hash, text, timeout, loop=loop, future=future)
+        result: RNS.PacketReceipt = await future
+
+        message["status"] = result.get_status()
+
+        return message
         
